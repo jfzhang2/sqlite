@@ -10,13 +10,14 @@
 **
 *************************************************************************
 ** This file contains code associated with the ANALYZE command.
-**
+** 这个文件包含代码 关联分析的命令
 ** The ANALYZE command gather statistics about the content of tables
+分析的命令汇聚分析关于表的内容
 ** and indices.  These statistics are made available to the query planner
 ** to help it make better decisions about how to perform queries.
-**
+**怎样操作查询
 ** The following system tables are or have been supported:
-**
+** 接下来的系统表被支持
 **    CREATE TABLE sqlite_stat1(tbl, idx, stat);
 **    CREATE TABLE sqlite_stat2(tbl, idx, sampleno, sample);
 **    CREATE TABLE sqlite_stat3(tbl, idx, nEq, nLt, nDLt, sample);
@@ -158,7 +159,9 @@
 
 /*
 ** This routine generates code that opens the sqlite_statN tables.
+这个路线产生代码那个打开sqlite的表
 ** The sqlite_stat1 table is always relevant.  sqlite_stat2 is now
+这个sqlite的表总是
 ** obsolete.  sqlite_stat3 and sqlite_stat4 are only opened when
 ** appropriate compile-time options are provided.
 **
@@ -169,16 +172,22 @@
 ** the sqlite_statN tables associated with the named table are deleted.
 ** If zWhere==0, then code is generated to delete all stat table entries.
 */
+//打开状态的表
 static void openStatTable(
+//定义解析的上下文
   Parse *pParse,          /* Parsing context */
+  //正在查找的数据库
   int iDb,                /* The database we are looking in */
+  //在这个游标上打开这个sqlite
   int iStatCur,           /* Open the sqlite_stat1 table on this cursor */
+  //删除入口 对于表或者是索引
   const char *zWhere,     /* Delete entries for this table or index */
+  //要么是tbl要么是idx
   const char *zWhereType  /* Either "tbl" or "idx" */
 ){
   static const struct {
-    const char *zName;
-    const char *zCols;
+    const char *zName;//当前的名称
+    const char *zCols;//当前的列的名称
   } aTable[] = {
     { "sqlite_stat1", "tbl,idx,stat" },
 #if defined(SQLITE_ENABLE_STAT4)
@@ -193,7 +202,9 @@ static void openStatTable(
 #endif
   };
   int i;
+  //获取sqlite的指针
   sqlite3 *db = pParse->db;
+  //对应的db的指针
   Db *pDb;
   Vdbe *v = sqlite3GetVdbe(pParse);
   int aRoot[ArraySize(aTable)];
@@ -207,6 +218,8 @@ static void openStatTable(
   /* Create new statistic tables if they do not exist, or clear them
   ** if they do already exist.
   */
+  //创建新的统计的表如果他们不会存在或者是清楚他们
+  //如果他们的确已经存在
   for(i=0; i<ArraySize(aTable); i++){
     const char *zTab = aTable[i].zName;
     Table *pStat;
@@ -219,6 +232,9 @@ static void openStatTable(
         sqlite3NestedParse(pParse,
             "CREATE TABLE %Q.%s(%s)", pDb->zName, zTab, aTable[i].zCols
         );
+        //sqlite的statn的表不存在 创建他。值得注意的是
+        //一个副作用 关于创建表的语句是去离开根部的页面关于这个表在寄存器
+        //这个是重要的  因为打开写的操作码的下面将会需要他
         aRoot[i] = pParse->regRoot;
         aCreateTbl[i] = OPFLAG_P2ISREG;
       }
@@ -226,9 +242,14 @@ static void openStatTable(
       /* The table already exists. If zWhere is not NULL, delete all entries 
       ** associated with the table zWhere. If zWhere is NULL, delete the
       ** entire contents of the table. */
+      //这个表是已经存在 如果where不是空
+      //删除所有的入口 与表的where关联  如果where是空
+      //删除这个表的入口的内容
       aRoot[i] = pStat->tnum;
       aCreateTbl[i] = 0;
+      //开始进行加锁
       sqlite3TableLock(pParse, iDb, aRoot[i], 1, zTab);
+      //如果where是存在的
       if( zWhere ){
         sqlite3NestedParse(pParse,
            "DELETE FROM %Q.%s WHERE %s=%Q",
@@ -236,12 +257,14 @@ static void openStatTable(
         );
       }else{
         /* The sqlite_stat[134] table already exists.  Delete all rows. */
+        //sqlite的表是存在的 删除所有的行
         sqlite3VdbeAddOp2(v, OP_Clear, aRoot[i], iDb);
       }
     }
   }
 
   /* Open the sqlite_stat[134] tables for writing. */
+  //在sqlite的表上面进行写操作
   for(i=0; aTable[i].zCols; i++){
     assert( i<ArraySize(aTable) );
     sqlite3VdbeAddOp4Int(v, OP_OpenWrite, iStatCur+i, aRoot[i], iDb, 3);
@@ -262,6 +285,8 @@ static void openStatTable(
 ** share an instance of the following structure to hold their state
 ** information.
 */
+//三个sql的函数 初始化 放入堆栈  获取
+//共享一个紧随着的结构的单例 去获取他们的状态的信息
 typedef struct Stat4Accum Stat4Accum;
 typedef struct Stat4Sample Stat4Sample;
 struct Stat4Sample {
@@ -269,19 +294,27 @@ struct Stat4Sample {
   tRowcnt *anDLt;                 /* sqlite_stat4.nDLt */
 #ifdef SQLITE_ENABLE_STAT3_OR_STAT4
   tRowcnt *anLt;                  /* sqlite_stat4.nLt */
+  //定义共用体
   union {
     i64 iRowid;                     /* Rowid in main table of the key */
+    //行的id在key的主表中
+    //key对已没有rowid的表
     u8 *aRowid;                     /* Key for WITHOUT ROWID tables */
   } u;
+  //aRowId[]的尺寸
   u32 nRowid;                     /* Sizeof aRowid[] */
+  //如果一个暂时的样例为true
   u8 isPSample;                   /* True if a periodic sample */
+  //对于总结的原因
   int iCol;                       /* If !isPSample, the reason for inclusion */
   u32 iHash;                      /* Tiebreaker hash */
 #endif
 };                                                    
 struct Stat4Accum {
+  //整个表的行的数目
   tRowcnt nRow;             /* Number of rows in the entire table */
   tRowcnt nPSample;         /* How often to do a periodic sample */
+  //列的数目
   int nCol;                 /* Number of columns in index + pk/rowid */
   int nKeyCol;              /* Number of index columns w/o the pk/rowid */
   int mxSample;             /* Maximum number of samples to accumulate */
@@ -292,15 +325,18 @@ struct Stat4Accum {
   int nSample;              /* Current number of samples */
   int iGet;                 /* Index of current sample accessed by stat_get() */
   Stat4Sample *a;           /* Array of mxSample Stat4Sample objects */
+  //数据库连接  内存分配
   sqlite3 *db;              /* Database connection, for malloc() */
 };
 
 /* Reclaim memory used by a Stat4Sample
 */
+//宣告内存 由Stat4Sample使用
 #ifdef SQLITE_ENABLE_STAT3_OR_STAT4
 static void sampleClear(sqlite3 *db, Stat4Sample *p){
   assert( db!=0 );
   if( p->nRowid ){
+    //释放内存
     sqlite3DbFree(db, p->u.aRowid);
     p->nRowid = 0;
   }
@@ -309,6 +345,7 @@ static void sampleClear(sqlite3 *db, Stat4Sample *p){
 
 /* Initialize the BLOB value of a ROWID
 */
+//初始化一个行ID的块数据
 #ifdef SQLITE_ENABLE_STAT3_OR_STAT4
 static void sampleSetRowid(sqlite3 *db, Stat4Sample *p, int n, const u8 *pData){
   assert( db!=0 );
@@ -317,6 +354,7 @@ static void sampleSetRowid(sqlite3 *db, Stat4Sample *p, int n, const u8 *pData){
   if( p->u.aRowid ){
     p->nRowid = n;
     memcpy(p->u.aRowid, pData, n);
+    //内存拷贝
   }else{
     p->nRowid = 0;
   }
@@ -325,6 +363,7 @@ static void sampleSetRowid(sqlite3 *db, Stat4Sample *p, int n, const u8 *pData){
 
 /* Initialize the INTEGER value of a ROWID.
 */
+//初始化一个行ID的整数的数值
 #ifdef SQLITE_ENABLE_STAT3_OR_STAT4
 static void sampleSetRowidInt64(sqlite3 *db, Stat4Sample *p, i64 iRowid){
   assert( db!=0 );
@@ -338,11 +377,13 @@ static void sampleSetRowidInt64(sqlite3 *db, Stat4Sample *p, i64 iRowid){
 /*
 ** Copy the contents of object (*pFrom) into (*pTo).
 */
+//拷贝对象的内容
 #ifdef SQLITE_ENABLE_STAT3_OR_STAT4
 static void sampleCopy(Stat4Accum *p, Stat4Sample *pTo, Stat4Sample *pFrom){
   pTo->isPSample = pFrom->isPSample;
   pTo->iCol = pFrom->iCol;
   pTo->iHash = pFrom->iHash;
+  //内存拷贝
   memcpy(pTo->anEq, pFrom->anEq, sizeof(tRowcnt)*p->nCol);
   memcpy(pTo->anLt, pFrom->anLt, sizeof(tRowcnt)*p->nCol);
   memcpy(pTo->anDLt, pFrom->anDLt, sizeof(tRowcnt)*p->nCol);
@@ -370,6 +411,7 @@ static void stat4Destructor(void *pOld){
 
 /*
 ** Implementation of the stat_init(N,K,C) SQL function. The three parameters
+实现sql的函数
 ** are:
 **     N:    The number of columns in the index including the rowid/pk (note 1)
 **     K:    The number of columns in the index excluding the rowid/pk.
@@ -392,7 +434,9 @@ static void stat4Destructor(void *pOld){
 ** object.
 */
 static void statInit(
+//sql的上下文
   sqlite3_context *context,
+  //参数
   int argc,
   sqlite3_value **argv
 ){
@@ -451,6 +495,7 @@ static void statInit(
     p->iPrn = 0x689e962d*(u32)nCol ^ 0xd0944565*(u32)sqlite3_value_int(argv[2]);
   
     /* Set up the Stat4Accum.a[] and aBest[] arrays */
+    //建立数组
     p->a = (struct Stat4Sample*)&p->current.anLt[nColUp];
     p->aBest = &p->a[mxSample];
     pSpace = (u8*)(&p->a[mxSample+nCol]);
@@ -578,6 +623,7 @@ static void sampleInsert(Stat4Accum *p, Stat4Sample *pNew, int nEqZero){
     }
     if( pUpgrade ){
       pUpgrade->iCol = pNew->iCol;
+      //更新优先级
       pUpgrade->anEq[pUpgrade->iCol] = pNew->anEq[pUpgrade->iCol];
       goto find_new_min;
     }
@@ -586,6 +632,7 @@ static void sampleInsert(Stat4Accum *p, Stat4Sample *pNew, int nEqZero){
 
   /* If necessary, remove sample iMin to make room for the new sample. */
   if( p->nSample>=p->mxSample ){
+    //最小的状态的采样
     Stat4Sample *pMin = &p->a[p->iMin];
     tRowcnt *anEq = pMin->anEq;
     tRowcnt *anLt = pMin->anLt;
@@ -609,11 +656,13 @@ static void sampleInsert(Stat4Accum *p, Stat4Sample *pNew, int nEqZero){
 #endif
 
   /* Insert the new sample */
+  //插入新的sample
   pSample = &p->a[p->nSample];
   sampleCopy(p, pSample, pNew);
   p->nSample++;
 
   /* Zero the first nEqZero entries in the anEq[] array. */
+  //将在数组中第一个等于0的入口设置为0
   memset(pSample->anEq, 0, sizeof(tRowcnt)*nEqZero);
 
 #ifdef SQLITE_ENABLE_STAT4
@@ -953,11 +1002,17 @@ static void callStatGet(Vdbe *v, int regStat4, int iParam, int regOut){
 ** a single table.
 */
 static void analyzeOneTable(
+  //解析的上下文
   Parse *pParse,   /* Parser context */
+  //谁的指数的表将会被分析
   Table *pTab,     /* Table whose indices are to be analyzed */
+  //如果不为空 仅仅分析一个索引
   Index *pOnlyIdx, /* If not NULL, only analyze this one index */
+  //写sqlite的表的游标的索引
   int iStatCur,    /* Index of VdbeCursor that writes the sqlite_stat1 table */
+  //合适的内存位置的开始
   int iMem,        /* Available memory locations begin here */
+  //接下来的一个可用的游标
   int iTab         /* Next available cursor */
 ){
   sqlite3 *db = pParse->db;    /* Database handle */
@@ -1367,6 +1422,7 @@ void sqlite3Analyze(Parse *pParse, Token *pName1, Token *pName2){
   if( pName1==0 ){
     /* Form 1:  Analyze everything */
     for(i=0; i<db->nDb; i++){
+      //临时数据库不需要做统计分析
       if( i==1 ) continue;  /* Do not analyze the TEMP database */
       analyzeDatabase(pParse, i);
     }
@@ -1493,6 +1549,7 @@ static void decodeIntArray(
 ** the table.
 */
 static int analysisLoader(void *pData, int argc, char **argv, char **NotUsed){
+  //统计的结构体的实体的对象
   analysisInfo *pInfo = (analysisInfo*)pData;
   Index *pIndex;
   Table *pTable;
@@ -1660,8 +1717,10 @@ static Index *findIndexOrPrimaryKey(
 **
 ** where %Q is replaced with the database name before the SQL is executed.
 */
+//加载统计表
 static int loadStatTbl(
   sqlite3 *db,                  /* Database handle */
+  //猜想是仅仅存在列的记录一个
   int bStat3,                   /* Assume single column records only */
   const char *zSql1,            /* SQL statement 1 (see above) */
   const char *zSql2,            /* SQL statement 2 (see above) */
@@ -1685,7 +1744,9 @@ static int loadStatTbl(
   while( sqlite3_step(pStmt)==SQLITE_ROW ){
     int nIdxCol = 1;              /* Number of columns in stat4 records */
 
+    //索引的名称
     char *zIndex;   /* Index name */
+    //指针指向索引的对象
     Index *pIdx;    /* Pointer to the index object */
     int nSample;    /* Number of samples */
     int nByte;      /* Bytes of space required */
@@ -1838,6 +1899,7 @@ int sqlite3AnalysisLoad(sqlite3 *db, int iDb){
   assert( db->aDb[iDb].pBt!=0 );
 
   /* Clear any prior statistics */
+  //清除先前的所有的统计的信息
   assert( sqlite3SchemaMutexHeld(db, iDb, 0) );
   for(i=sqliteHashFirst(&db->aDb[iDb].pSchema->idxHash);i;i=sqliteHashNext(i)){
     Index *pIdx = sqliteHashData(i);
@@ -1867,6 +1929,7 @@ int sqlite3AnalysisLoad(sqlite3 *db, int iDb){
 
 
   /* Load the statistics from the sqlite_stat4 table. */
+  //加载统计的信息
 #ifdef SQLITE_ENABLE_STAT3_OR_STAT4
   if( rc==SQLITE_OK && OptimizationEnabled(db, SQLITE_Stat34) ){
     int lookasideEnabled = db->lookaside.bEnabled;

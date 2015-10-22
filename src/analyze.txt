@@ -1,0 +1,46 @@
+1、  /* Return a pointer to the allocated object to the caller.  Note that
+    ** only the pointer (the 2nd parameter) matters.  The size of the object
+    ** (given by the 3rd parameter) is never used and can be any positive
+    ** value. */
+2、返回一个指针指向这个回收的对象相对于调用者。值得注意的是，仅有这个指针干预。这个对象
+的存储的空间从来被使用过。可以是任何大于0的数值
+3、/*
+  ** Copy the contents of sample *pNew into the p->a[] array. If necessary,
+  ** remove the least desirable sample from p->a[] to make room.
+  */
+4、拷贝这个样例的内容 新的指针到指针所对应的数组上面去，如果是必要的，移除最期望的样例从指针
+所指向的数组到所对应的空间
+5、 /* This sample is being added because the prefix that ends in column
+      ** iCol occurs many times in the table. However, if we have already
+      ** added a sample that shares this prefix, there is no need to add
+      ** this one. Instead, upgrade the priority of the highest priority
+      ** existing sample that shares this prefix.  */
+6、这个样例是被添加因为前缀结束在列的游标多次在这个表中。然而，如果我们已经添加了
+一个样例共享前缀，那就没有必要去添添加这个，反而，更新这个已经存在的的最高优先级的
+优先级。
+7、/*
+  ** Generate code to do an analysis of all indices associated with
+  ** a single table.
+  */
+8、生成代码去做一个与一个单独表关联的的指数的分析
+9、 /* Establish a read-lock on the table at the shared-cache level.
+    ** Open a read-only cursor on the table. Also allocate a cursor number
+    ** to use for scanning indexes (iIdxCur). No index cursor is opened at
+    ** this time though.  */
+10、建立一个只读的锁在表上面在共享的缓存的级别。打开一个只读的游标在表的上面。同时回收一个
+游标的数据去使用来扫描索引。没有索引的游标被打开在这个时候。
+11、/* For a single-column UNIQUE index, once we have found a non-NULL
+           ** row, we know that all the rest will be distinct, so skip
+           ** subsequent distinctness tests. */
+12、对于一个单个的唯一的索引，一旦我们已经发现了一个非空的行，我们已经知道所有的
+rest都将是独一无二的，所以跳过这些。
+13、 /* Create a single sqlite_stat1 entry containing NULL as the index
+     ** name and the row count as the content.
+     */
+14、创建一个单独的sqlite的统计的入口包含空在这个索引的名字上面并且行的
+数量是作为内容。
+15、/*
+   ** Generate code that will do an analysis of an entire database
+   */
+16、生成代码在一个整个的数据库上面做分析。
+17、
