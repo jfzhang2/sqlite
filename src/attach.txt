@@ -1,0 +1,65 @@
+
+SQLite 附加数据库
+假设这样一种情况，当在同一时间有多个数据库可用，您想使用其中的任何一个。
+SQLite 的 ATTACH DTABASE 语句是用来选择一个特定的数据库，使用该命令后，
+所有的 SQLite 语句将在附加的数据库下执行。
+
+1、这个文件是用来实现Attach与Detach的命令。
+2、解析一个表达式那个事Attach或者是Detach的语句的一部分。
+这个与解析一般的sql语句略有不同，因为简单的sql是被作为字符串
+处理。既不可能是列的名称，也不可能是别名。
+举例： ATTACH DATABSE abc AS def
+这个对待两个表达式作为一般性的字面的上的字符串， abc  def
+而不是查找相同的名称所对应的列
+这个仅仅适用于表达式的根部节点
+
+所以下面的语句
+
+attach database abc||def as 'db2'
+将会失败 因为无论是abc还是def都是无法被解析。
+
+3、*
+  ** An SQL user-function registered to do the work of an ATTACH statement. The
+  ** three arguments to the function come directly from an attach statement:
+  **
+  **     ATTACH DATABASE x AS y KEY z
+  **
+  **     SELECT sqlite_attach(x, y, z)
+  **
+  ** If the optional "KEY z" syntax is omitted, an SQL NULL is passed as the
+  ** third argument.
+  */
+4、一个sql的用户的函数被注册去做这个attach语句的工作。这三个参数对于这个函数
+是直接来自于attach的语句。
+如果这个具有可选择性的 “key z”的表达式被忽略，那么自动的会传递一个null
+5、
+//对应的是实体的数据库文件名称
+zFile = (const char *)sqlite3_value_text(argv[0]);
+//对应的是附加的数据库的昵称
+zName = (const char *)sqlite3_value_text(argv[1]);
+6、附加操作的三种异常
+too many attached databases 太多的数据库的附件的信息
+cannot ATTACH database within transaction 在一次事务中不可以进行数据库的附加的操作
+database %s is already in use 指定的数据库附加昵称是已近存在的
+7、撤销附件操作的失败也是分下面的几种情况
+no such database 不存在这样的数据库
+cannot detach database  无法撤销数据库
+cannot DETACH database within transaction 不可在事务中撤销数据库
+database %s is locked 指定别名的数据库是已经被加锁了
+
+8、static void codeAttach(
+    Parse *pParse,       /* The parser context */
+    int type,            /* Either SQLITE_ATTACH or SQLITE_DETACH */
+    FuncDef const *pFunc,/* FuncDef wrapper for detachFunc() or attachFunc() */
+    Expr *pAuthArg,      /* Expression to pass to authorization callback */
+    Expr *pFilename,     /* Name of database file */
+    Expr *pDbname,       /* Name of the database to use internally */
+    Expr *pKey           /* Database key for encryption extension */
+  )
+9、解析器的上下文
+   当前的函数的功能类型要么是attach 要么是detach
+   函数所指向的句柄要么是detachFunc要么是attachFunc
+   认证回调的表达式
+   数据库文件的名称
+   内部使用的数据的名称
+   内部扩展的加密的key

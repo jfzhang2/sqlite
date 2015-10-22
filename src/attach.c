@@ -36,7 +36,9 @@ static int resolveAttachExpr(NameContext *pName, Expr *pExpr)
 {
   int rc = SQLITE_OK;
   if( pExpr ){
+    //判断表达式的类型
     if( pExpr->op!=TK_ID ){
+      //解析表达式的名称
       rc = sqlite3ResolveExprNames(pName, pExpr);
     }else{
       pExpr->op = TK_STRING;
